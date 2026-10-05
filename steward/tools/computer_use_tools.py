@@ -323,13 +323,14 @@ class WinRtOcrTool(BaseTool):
             return ToolResult(success=False, error=f"Image not found: {p}")
 
         # PowerShell script using Windows.Media.Ocr
+        escaped_path = str(p).replace("\\", "\\\\")
         ps_script = f"""
         Add-Type -AssemblyName System.Drawing
         [Windows.Globalization.Language, Windows.Foundation.UniversalApiContract, ContentType = WindowsRuntime] | Out-Null
         [Windows.Media.Ocr.OcrEngine, Windows.Foundation.UniversalApiContract, ContentType = WindowsRuntime] | Out-Null
         [Windows.Graphics.Imaging.BitmapDecoder, Windows.Foundation.UniversalApiContract, ContentType = WindowsRuntime] | Out-Null
 
-        $path = "{str(p).replace('\\', '\\\\')}"
+        $path = "{escaped_path}"
         $file = [Windows.Storage.StorageFile]::GetFileFromPathAsync($path).GetAwaiter().GetResult()
         $stream = $file.OpenAsync([Windows.Storage.FileAccessMode]::Read).GetAwaiter().GetResult()
         $decoder = [Windows.Graphics.Imaging.BitmapDecoder]::CreateAsync($stream).GetAwaiter().GetResult()

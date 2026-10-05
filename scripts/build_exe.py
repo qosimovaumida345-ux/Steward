@@ -1,6 +1,6 @@
 """
 Packaging Script: Compiles Steward binaries using PyInstaller.
-Outputs: dist/agent_daemon.exe and dist/agent_app.exe
+Outputs: dist/steward_daemon.exe and dist/steward_app.exe
 """
 
 from __future__ import annotations
@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-SPEC_FILE = ROOT_DIR / "scripts" / "STEWARD.spec"
+SPEC_FILE = ROOT_DIR / "scripts" / "steward.spec"
 
 
 def build():

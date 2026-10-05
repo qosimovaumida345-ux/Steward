@@ -1,6 +1,7 @@
 # ============================================================
 # Render Blueprint Specification for STEWARD
-# Autonomous Developer Agent - Cloud Backend & Worker
+# Autonomous Developer Agent - Cloud Backend & Database
+# 100% Free-Tier Architecture (Outbox worker runs inside Web Service)
 # ============================================================
 # Docs: https://render.com/docs/blueprint-spec
 
@@ -15,7 +16,7 @@ databases:
     ipAllowList: []
 
 services:
-  # 1. Steward Headless Cloud Daemon (Web Service API & WebSocket Server)
+  # Steward Headless Cloud Daemon (Web Service API, WebSockets & Outbox Worker)
   - type: web
     name: steward-backend
     runtime: python
@@ -50,24 +51,3 @@ services:
         value: z-ai/glm-5.3
       - key: COMPACTOR_MODEL
         value: nv-mistralai/mistral-nemo-12b-instruct
-
-  # 2. Steward Background Replication & Outbox Worker
-  - type: worker
-    name: steward-outbox-worker
-    runtime: python
-    region: oregon
-    plan: free
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
-    startCommand: python -m steward.storage.sync_outbox
-    autoDeploy: true
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.11.9
-      - key: RENDER_SYNC_ENABLED
-        value: "true"
-      - key: RENDER_POSTGRES_DSN
-        fromDatabase:
-          name: steward-db
-          property: connectionString
-      - key: NVIDIA_API_KEY
-        sync: false

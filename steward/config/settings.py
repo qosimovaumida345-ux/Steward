@@ -57,24 +57,24 @@ class Settings(BaseModel):
 
     # Local Persistence
     data_dir: Path = Field(
-        default_factory=lambda: Path(os.getenv("STEWARD_DATA_DIR", str(DEFAULT_DATA_DIR)))
+        default_factory=lambda: Path(os.getenv("STEWARD_DATA_DIR") or str(DEFAULT_DATA_DIR))
     )
     sqlite_path: Path = Field(
-        default_factory=lambda: Path(os.getenv("STEWARD_SQLITE_PATH", str(DEFAULT_SQLITE_PATH)))
+        default_factory=lambda: Path(os.getenv("STEWARD_SQLITE_PATH") or str(DEFAULT_SQLITE_PATH))
     )
 
     # Network / Daemon
     daemon_host: str = Field(
-        default_factory=lambda: os.getenv("STEWARD_HOST", DEFAULT_DAEMON_HOST)
+        default_factory=lambda: os.getenv("STEWARD_HOST") or DEFAULT_DAEMON_HOST
     )
     daemon_port: int = Field(
-        default_factory=lambda: int(os.getenv("STEWARD_PORT", str(DEFAULT_DAEMON_PORT)))
+        default_factory=lambda: int(os.getenv("STEWARD_PORT") or str(DEFAULT_DAEMON_PORT))
     )
 
     # Security
     permission_mode: PermissionMode = Field(
         default_factory=lambda: PermissionMode(
-            os.getenv("STEWARD_PERMISSION_MODE", PermissionMode.GUARDED.value)
+            os.getenv("STEWARD_PERMISSION_MODE") or PermissionMode.GUARDED.value
         )
     )
     workspace_root: Path = Field(

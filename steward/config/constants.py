@@ -34,7 +34,7 @@ DEFAULT_WS_PATH = "/api/v1/sessions/{session_id}/ws"
 DEFAULT_REPLAY_BATCH_SIZE = 50
 
 # Storage & Journal Defaults
-DEFAULT_DATA_DIR = Path.home() / ".STEWARD"
+DEFAULT_DATA_DIR = Path.home() / ".steward"
 DEFAULT_SQLITE_PATH = DEFAULT_DATA_DIR / "agent_store.db"
 DEFAULT_JOURNAL_JSONL_NAME = "timeline.jsonl"
 SQLITE_BUSY_TIMEOUT_MS = 5000

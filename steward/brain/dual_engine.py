@@ -87,7 +87,6 @@ class DualEngineCoordinator:
                 messages=messages,
                 model=model,
                 temperature=0.6,
-                max_tokens=8192,
             ):
                 if r_chunk:
                     full_reasoning.append(r_chunk)
@@ -136,7 +135,6 @@ class DualEngineCoordinator:
                 messages=messages,
                 model=model,
                 temperature=0.4,
-                max_tokens=6144,
             ):
                 if r_chunk:
                     full_reasoning.append(r_chunk)

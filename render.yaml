@@ -41,11 +41,15 @@ services:
       - key: NVIDIA_API_KEY
         sync: false
       - key: PLANNER_MODEL
-        value: deepseek-ai/deepseek-r1
+        value: nvidia/nemotron-3-ultra-550b-a55b
       - key: ACTOR_MODEL
-        value: meta/llama-3.3-70b-instruct
+        value: mistralai/mistral-large-2-instruct
+      - key: CODER_MODEL
+        value: mistralai/codestral-22b-instruct-v0.1
+      - key: VISION_MODEL
+        value: meta/llama-3.2-90b-vision-instruct
       - key: COMPACTOR_MODEL
-        value: meta/llama-3.1-8b-instruct
+        value: nv-mistralai/mistral-nemo-12b-instruct
 
   # 2. Steward Background Replication & Outbox Worker
   - type: worker

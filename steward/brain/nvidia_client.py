@@ -13,6 +13,7 @@ import httpx
 
 from ..config.constants import (
     DEFAULT_ACTOR_MODEL,
+    DEFAULT_MAX_OUTPUT_TOKENS,
     DEFAULT_PLANNER_MODEL,
     HTTP_TIMEOUT_SECONDS,
     NVIDIA_NIM_BASE_URL,
@@ -73,14 +74,21 @@ class NvidiaNimClient:
         messages: List[Dict[str, Any]],
         model: Optional[str] = None,
         temperature: float = 0.6,
-        max_tokens: int = 4096,
+        max_tokens: Optional[int] = None,
         tools: Optional[List[Dict[str, Any]]] = None,
     ) -> AsyncGenerator[tuple[str, str], None]:
         """
         Stream chat completion. Yields (reasoning_chunk, content_chunk).
         Uses RobustReasoningParser to cleanly separate <think> CoT tokens.
+        Dynamically uses the model's full output token capability.
         """
         target_model = model or DEFAULT_PLANNER_MODEL
+        profile = self.catalog.get_profile(target_model)
+        resolved_max_tokens = (
+            max_tokens
+            or (profile.max_output_tokens if profile else None)
+            or DEFAULT_MAX_OUTPUT_TOKENS
+        )
         await self.rate_limiter.acquire(estimated_tokens=500)
 
         # In case API key is not supplied (e.g. offline/mock testing), return a fallback simulation
@@ -101,7 +109,7 @@ class NvidiaNimClient:
             "model": target_model,
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            "max_tokens": resolved_max_tokens,
             "stream": True,
         }
         if tools:
@@ -161,11 +169,17 @@ class NvidiaNimClient:
         messages: List[Dict[str, Any]],
         model: Optional[str] = None,
         temperature: float = 0.2,
-        max_tokens: int = 4096,
+        max_tokens: Optional[int] = None,
         tools: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Non-streaming chat completion with tool calling support."""
         target_model = model or DEFAULT_ACTOR_MODEL
+        profile = self.catalog.get_profile(target_model)
+        resolved_max_tokens = (
+            max_tokens
+            or (profile.max_output_tokens if profile else None)
+            or DEFAULT_MAX_OUTPUT_TOKENS
+        )
         await self.rate_limiter.acquire(estimated_tokens=500)
 
         if not self.api_key:
@@ -180,7 +194,7 @@ class NvidiaNimClient:
             "model": target_model,
             "messages": messages,
             "temperature": temperature,
-            "max_tokens": max_tokens,
+            "max_tokens": resolved_max_tokens,
             "stream": False,
         }
         if tools:

@@ -8,23 +8,29 @@ from pathlib import Path
 # API Gateways
 NVIDIA_NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
-# Primary Models
-DEFAULT_PLANNER_MODEL = "deepseek-ai/deepseek-r1"
-DEFAULT_ACTOR_MODEL = "meta/llama-3.3-70b-instruct"
-DEFAULT_COMPACTOR_MODEL = "meta/llama-3.1-8b-instruct"
-DEFAULT_FAST_MODEL = "meta/llama-3.1-70b-instruct"
+# Primary Models (Optimized for NVIDIA Endpoint)
+DEFAULT_PLANNER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
+DEFAULT_ACTOR_MODEL = "mistralai/mistral-large-2-instruct"
+DEFAULT_CODER_MODEL = "mistralai/codestral-22b-instruct-v0.1"
+DEFAULT_VISION_MODEL = "meta/llama-3.2-90b-vision-instruct"
+DEFAULT_COMPACTOR_MODEL = "nv-mistralai/mistral-nemo-12b-instruct"
+DEFAULT_FAST_MODEL = "google/gemma-4-31b-it"
 
 # Model Fallback Chain
 PLANNER_FALLBACK_CHAIN = [
-    "deepseek-ai/deepseek-r1",
-    "meta/llama-3.3-70b-instruct",
+    "nvidia/nemotron-3-ultra-550b-a55b",
+    "nvidia/llama-3.1-nemotron-ultra-253b-v1",
+    "z-ai/glm-5.3",
+    "moonshotai/kimi-k3",
     "nvidia/llama-3.1-nemotron-70b-instruct",
 ]
 
 ACTOR_FALLBACK_CHAIN = [
-    "meta/llama-3.3-70b-instruct",
+    "mistralai/mistral-large-2-instruct",
+    "mistralai/codestral-22b-instruct-v0.1",
     "nvidia/llama-3.1-nemotron-70b-instruct",
-    "meta/llama-3.1-70b-instruct",
+    "mistralai/mixtral-8x22b-v0.1",
+    "meta/codellama-70b",
 ]
 
 # Network and Daemon Defaults
@@ -39,13 +45,14 @@ DEFAULT_SQLITE_PATH = DEFAULT_DATA_DIR / "agent_store.db"
 DEFAULT_JOURNAL_JSONL_NAME = "timeline.jsonl"
 SQLITE_BUSY_TIMEOUT_MS = 5000
 
-# Token Budgeting & Compaction
-MAX_CONTEXT_TOKENS = 128_000
-WARNING_CONTEXT_TOKENS = 96_000
-COMPACT_THRESHOLD_TOKENS = 80_000
-TARGET_COMPACT_TOKENS = 40_000
-MAX_TOOL_OUTPUT_CHARS = 16_000
-MAX_STREAMING_CHUNK_CHARS = 4096
+# Token Budgeting & Compaction (High-Capacity Engine)
+DEFAULT_MAX_OUTPUT_TOKENS = 16_384
+MAX_CONTEXT_TOKENS = 1_000_000
+WARNING_CONTEXT_TOKENS = 200_000
+COMPACT_THRESHOLD_TOKENS = 200_000
+TARGET_COMPACT_TOKENS = 100_000
+MAX_TOOL_OUTPUT_CHARS = 250_000
+MAX_STREAMING_CHUNK_CHARS = 16_384
 
 # Timeouts & Retries
 HTTP_TIMEOUT_SECONDS = 90.0

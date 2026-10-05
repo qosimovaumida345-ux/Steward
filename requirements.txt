@@ -1,0 +1,27 @@
+# Core Runtime Dependencies
+httpx>=0.27.0
+pydantic>=2.7.0
+pydantic-settings>=2.0.0
+aiohttp>=3.9.0
+websockets>=12.0
+python-dotenv>=1.0.0
+mss>=9.0.0
+Pillow>=10.0.0
+rich>=13.0.0
+
+# Windows-specific system integrations (Platform Guarded)
+pywin32>=306; sys_platform == 'win32'
+
+# Database & Sync
+psycopg2-binary>=2.9.9
+pg8000>=1.30.0
+
+# Desktop GUI (Client only)
+PyQt6>=6.6.0; sys_platform == 'win32'
+QtPy>=2.4.0
+QtAwesome>=1.3.0
+
+# Packaging & Testing
+pytest>=8.0.0
+pytest-asyncio>=0.23.0
+pytest-cov>=4.1.0

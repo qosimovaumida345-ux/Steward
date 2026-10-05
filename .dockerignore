@@ -1,0 +1,16 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.coverage
+dist
+build
+*.spec
+.env
+.git
+.gitignore
+*.log
+*.db
+*.db-wal
+*.db-shm

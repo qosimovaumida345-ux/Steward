@@ -43,11 +43,11 @@ services:
       - key: PLANNER_MODEL
         value: nvidia/nemotron-3-ultra-550b-a55b
       - key: ACTOR_MODEL
-        value: mistralai/mistral-large-2-instruct
-      - key: CODER_MODEL
-        value: mistralai/codestral-22b-instruct-v0.1
-      - key: VISION_MODEL
-        value: meta/llama-3.2-90b-vision-instruct
+        value: deepseek-ai/deepseek-v4.1-flash
+      - key: HEAVY_MODEL
+        value: moonshotai/kimi-k3
+      - key: AGENT_MODEL
+        value: z-ai/glm-5.3
       - key: COMPACTOR_MODEL
         value: nv-mistralai/mistral-nemo-12b-instruct
 

@@ -9,28 +9,29 @@ from pathlib import Path
 NVIDIA_NIM_BASE_URL = "https://integrate.api.nvidia.com/v1"
 
 # Primary Models (Optimized for NVIDIA Endpoint)
-DEFAULT_PLANNER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"
-DEFAULT_ACTOR_MODEL = "mistralai/mistral-large-2-instruct"
-DEFAULT_CODER_MODEL = "mistralai/codestral-22b-instruct-v0.1"
-DEFAULT_VISION_MODEL = "meta/llama-3.2-90b-vision-instruct"
+DEFAULT_PLANNER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b"  # Orchestrator & high-level planner
+DEFAULT_ACTOR_MODEL = "deepseek-ai/deepseek-v4.1-flash"       # #1 Workhorse coder (207 t/s, 1M context)
+DEFAULT_HEAVY_MODEL = "moonshotai/kimi-k3"                   # Heavy refactor, frontend UI, vision
+DEFAULT_AGENT_MODEL = "z-ai/glm-5.3"                         # Agentic workflows & tool routing
+DEFAULT_VISION_MODEL = "moonshotai/kimi-k3"                  # Multimodal frontend and screenshot analysis
 DEFAULT_COMPACTOR_MODEL = "nv-mistralai/mistral-nemo-12b-instruct"
-DEFAULT_FAST_MODEL = "google/gemma-4-31b-it"
+DEFAULT_FAST_MODEL = "z-ai/glm-5.3-flash"
 
 # Model Fallback Chain
 PLANNER_FALLBACK_CHAIN = [
     "nvidia/nemotron-3-ultra-550b-a55b",
-    "nvidia/llama-3.1-nemotron-ultra-253b-v1",
-    "z-ai/glm-5.3",
     "moonshotai/kimi-k3",
-    "nvidia/llama-3.1-nemotron-70b-instruct",
+    "z-ai/glm-5.3",
+    "deepseek-ai/deepseek-v4.1-flash",
+    "nvidia/llama-3.1-nemotron-ultra-253b-v1",
 ]
 
 ACTOR_FALLBACK_CHAIN = [
+    "deepseek-ai/deepseek-v4.1-flash",
+    "moonshotai/kimi-k3",
+    "z-ai/glm-5.3",
     "mistralai/mistral-large-2-instruct",
     "mistralai/codestral-22b-instruct-v0.1",
-    "nvidia/llama-3.1-nemotron-70b-instruct",
-    "mistralai/mixtral-8x22b-v0.1",
-    "meta/codellama-70b",
 ]
 
 # Network and Daemon Defaults

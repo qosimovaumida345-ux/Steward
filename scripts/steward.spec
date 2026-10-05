@@ -4,7 +4,7 @@
 import os
 import sys
 from pathlib import Path
-from PyInstaller.utils.hooks import collect_submodules, collect_data_files
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files, collect_dynamic_libs
 
 SPEC_DIR = Path(SPECPATH)
 ROOT_DIR = SPEC_DIR.parent
@@ -21,16 +21,27 @@ daemon_hidden = collect_submodules('steward') + [
 ]
 
 # Hidden imports for desktop GUI
-ui_hidden = daemon_hidden + [
+ui_hidden = daemon_hidden + collect_submodules('PyQt6') + [
     'PyQt6', 'PyQt6.QtCore', 'PyQt6.QtGui', 'PyQt6.QtWidgets', 'qtpy'
 ]
+
+# Collect PyQt6 data files and dynamic libraries (platforms/qwindows.dll, styles, etc.)
+pyqt6_datas = collect_data_files('PyQt6')
+pyqt6_binaries = collect_dynamic_libs('PyQt6')
+
+# Extra application data files
+extra_datas = []
+if (ROOT_DIR / '.env').exists():
+    extra_datas.append((str(ROOT_DIR / '.env'), '.'))
+if (ROOT_DIR / 'CustomAgentLogo.png').exists():
+    extra_datas.append((str(ROOT_DIR / 'CustomAgentLogo.png'), '.'))
 
 # 1. Daemon Executable Analysis
 a_daemon = Analysis(
     [str(ROOT_DIR / 'run_daemon.py')],
     pathex=[str(ROOT_DIR)],
     binaries=[],
-    datas=[],
+    datas=extra_datas,
     hiddenimports=daemon_hidden,
     hookspath=[],
     hooksconfig={},
@@ -69,8 +80,8 @@ exe_daemon = EXE(
 a_app = Analysis(
     [str(ROOT_DIR / 'run_app.py')],
     pathex=[str(ROOT_DIR)],
-    binaries=[],
-    datas=[],
+    binaries=pyqt6_binaries,
+    datas=pyqt6_datas + extra_datas,
     hiddenimports=ui_hidden,
     hookspath=[],
     hooksconfig={},
@@ -96,7 +107,7 @@ exe_app = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    upx_exclude=[],
+    upx_exclude=['qwindows.dll', 'Qt6Core.dll', 'Qt6Gui.dll', 'Qt6Widgets.dll', '*PyQt6*'],
     runtime_tmpdir=None,
     console=False,
     disable_windowed_traceback=False,

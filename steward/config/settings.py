@@ -20,13 +20,24 @@ from .constants import (
     DEFAULT_DAEMON_PORT,
     DEFAULT_DATA_DIR,
     DEFAULT_PLANNER_MODEL,
+    DEFAULT_RENDER_POSTGRES_DSN,
+    DEFAULT_SERVER_URL,
     DEFAULT_SQLITE_PATH,
     NVIDIA_NIM_BASE_URL,
     PermissionMode,
 )
 
-# Load existing .env files if present
-load_dotenv(override=False)
+# Load existing .env files if present (check current dir, parent dir, or executable dir)
+_candidate_envs = [
+    Path.cwd() / ".env",
+    Path(__file__).resolve().parent.parent.parent / ".env",
+]
+for _env_path in _candidate_envs:
+    if _env_path.exists():
+        load_dotenv(dotenv_path=_env_path, override=False)
+        break
+else:
+    load_dotenv(override=False)
 
 
 class Settings(BaseModel):
@@ -49,10 +60,15 @@ class Settings(BaseModel):
 
     # Cloud Storage / Render PostgreSQL
     render_postgres_dsn: Optional[str] = Field(
-        default_factory=lambda: os.getenv("RENDER_POSTGRES_DSN") or os.getenv("DATABASE_URL")
+        default_factory=lambda: os.getenv("RENDER_POSTGRES_DSN") or os.getenv("DATABASE_URL") or DEFAULT_RENDER_POSTGRES_DSN
     )
     render_sync_enabled: bool = Field(
         default_factory=lambda: os.getenv("RENDER_SYNC_ENABLED", "true").lower() in ("true", "1", "yes")
+    )
+
+    # Server / Render Cloud Endpoint
+    server_url: str = Field(
+        default_factory=lambda: os.getenv("STEWARD_SERVER_URL") or os.getenv("STEWARD_HOST") or DEFAULT_SERVER_URL
     )
 
     # Local Persistence

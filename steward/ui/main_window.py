@@ -23,6 +23,7 @@ from qtpy.QtWidgets import (
 )
 
 from ..config.constants import DEFAULT_DAEMON_HOST, DEFAULT_DAEMON_PORT
+from ..config.endpoints import resolve_server_endpoints
 from ..config.settings import get_settings
 from .components.approval_modal import ApprovalModal
 from .components.diff_viewer import DiffViewerWidget
@@ -48,9 +49,10 @@ class MainWindow(QMainWindow):
         super().__init__(parent)
         self.host = host
         self.port = port
+        self.http_base, self.ws_base = resolve_server_endpoints(host, port)
         self.current_session_id = "initial"
 
-        self.setWindowTitle("Steward — Autonomous Developer Agent")
+        self.setWindowTitle(f"Steward — Autonomous Developer Agent [{self.http_base}]")
         self.resize(1300, 850)
 
         self._build_ui()
@@ -146,18 +148,23 @@ class MainWindow(QMainWindow):
         )
         self.worker.event_received.connect(self._on_event_received)
         self.worker.connection_changed.connect(self.status_bar.set_connected)
+        self.worker.error_occurred.connect(self._on_worker_error)
         self.worker.start()
+
+    @Slot(str)
+    def _on_worker_error(self, err: str) -> None:
+        self.terminal_widget.append_output(f"[Daemon Alert] {err}\n")
 
     def _refresh_sessions(self) -> None:
         try:
-            url = f"http://{self.host}:{self.port}/api/v1/sessions"
-            with httpx.Client(timeout=3.0) as client:
+            url = f"{self.http_base}/api/v1/sessions"
+            with httpx.Client(timeout=5.0) as client:
                 res = client.get(url)
                 if res.status_code == 200:
                     sessions = res.json().get("sessions", [])
                     self.session_list.update_sessions(sessions)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to refresh sessions from %s: %s", self.http_base, e)
 
     @Slot(str)
     def _on_session_switched(self, session_id: str) -> None:
@@ -182,8 +189,8 @@ class MainWindow(QMainWindow):
         selected_model = self.model_selector.get_selected_model_id()
 
         try:
-            url = f"http://{self.host}:{self.port}/api/v1/sessions"
-            with httpx.Client(timeout=10.0) as client:
+            url = f"{self.http_base}/api/v1/sessions"
+            with httpx.Client(timeout=15.0) as client:
                 resp = client.post(
                     url,
                     json={"task": task_text, "model": selected_model},
@@ -194,7 +201,7 @@ class MainWindow(QMainWindow):
                         self._on_session_switched(new_sid)
                         self._refresh_sessions()
         except Exception as e:
-            self.terminal_widget.append_output(f"Failed to dispatch task to daemon: {e}")
+            self.terminal_widget.append_output(f"Failed to dispatch task to server ({self.http_base}): {e}\n")
 
     @Slot()
     def _on_cancel_clicked(self) -> None:

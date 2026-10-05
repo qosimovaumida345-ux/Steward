@@ -10,13 +10,15 @@ import sys
 import httpx
 
 from ..config.constants import DEFAULT_DAEMON_HOST, DEFAULT_DAEMON_PORT
+from ..config.endpoints import resolve_server_endpoints
 from ..config.settings import get_settings
 
 
 def main() -> None:
+    settings = get_settings()
     parser = argparse.ArgumentParser(description="Steward CLI")
-    parser.add_argument("--host", default=DEFAULT_DAEMON_HOST, help="Daemon host")
-    parser.add_argument("--port", type=int, default=DEFAULT_DAEMON_PORT, help="Daemon port")
+    parser.add_argument("--host", default=settings.server_url or DEFAULT_DAEMON_HOST, help="Daemon host or server URL")
+    parser.add_argument("--port", type=int, default=settings.daemon_port or DEFAULT_DAEMON_PORT, help="Daemon port")
 
     subparsers = parser.add_subparsers(dest="command")
 
@@ -35,7 +37,7 @@ def main() -> None:
     create_parser.add_argument("--model", help="Planner/Actor model to use")
 
     args = parser.parse_args()
-    base_url = f"http://{args.host}:{args.port}"
+    base_url, _ = resolve_server_endpoints(args.host, args.port)
 
     if args.command == "health":
         try:

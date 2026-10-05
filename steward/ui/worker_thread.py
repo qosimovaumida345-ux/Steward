@@ -46,22 +46,39 @@ class DaemonClientThread(QThread):
 
     def run(self) -> None:
         """Entry point executed on the secondary background thread."""
-        self._loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(self._loop)
-
-        self._connection = DaemonClientConnection(
-            session_id=self.session_id,
-            host=self.host,
-            port=self.port,
-            on_event=self._handle_event,
-            on_connection_change=self._handle_connection_change,
-        )
-
-        self._connection.start()
         try:
+            self._loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self._loop)
+
+            self._connection = DaemonClientConnection(
+                session_id=self.session_id,
+                host=self.host,
+                port=self.port,
+                on_event=self._handle_event,
+                on_connection_change=self._handle_connection_change,
+            )
+
+            self._connection.start(loop=self._loop)
             self._loop.run_forever()
+        except Exception as e:
+            logger.error("DaemonClientThread error: %s", e, exc_info=True)
+            self.error_occurred.emit(str(e))
         finally:
-            self._loop.close()
+            if self._loop and not self._loop.is_closed():
+                try:
+                    pending = asyncio.all_tasks(self._loop)
+                    for task in pending:
+                        task.cancel()
+                    if pending:
+                        self._loop.run_until_complete(
+                            asyncio.gather(*pending, return_exceptions=True)
+                        )
+                except Exception:
+                    pass
+                try:
+                    self._loop.close()
+                except Exception:
+                    pass
 
     def _handle_event(self, event: Dict[str, Any]) -> None:
         self.event_received.emit(event)
@@ -98,7 +115,7 @@ class DaemonClientThread(QThread):
                 on_event=self._handle_event,
                 on_connection_change=self._handle_connection_change,
             )
-            self._connection.start()
+            self._connection.start(loop=self._loop)
 
         asyncio.run_coroutine_threadsafe(_switch(), self._loop)
 
@@ -113,4 +130,4 @@ class DaemonClientThread(QThread):
                 except Exception:
                     pass
             self._loop.call_soon_threadsafe(self._loop.stop)
-        self.wait()
+        self.wait(3000)

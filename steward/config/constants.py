@@ -37,6 +37,8 @@ ACTOR_FALLBACK_CHAIN = [
 # Network and Daemon Defaults
 DEFAULT_DAEMON_HOST = "127.0.0.1"
 DEFAULT_DAEMON_PORT = 8765
+DEFAULT_SERVER_URL = "https://steward-backend-iem7.onrender.com"
+DEFAULT_RENDER_POSTGRES_DSN = "postgresql://steward_user:A5V80zwYeMQ3oPgc4isy7PMQaB8S6JBV@dpg-db20hugm7kps73e3i5og-a/steward_xnk8"
 DEFAULT_WS_PATH = "/api/v1/sessions/{session_id}/ws"
 DEFAULT_REPLAY_BATCH_SIZE = 50
 

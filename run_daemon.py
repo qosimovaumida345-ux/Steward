@@ -31,6 +31,10 @@ def main() -> None:
     args = parser.parse_args()
 
     host = args.host
+    if "://" in host:
+        import urllib.parse
+        parsed_h = urllib.parse.urlsplit(host).hostname
+        host = parsed_h or DEFAULT_DAEMON_HOST
     port = args.port
 
     print("==================================================")

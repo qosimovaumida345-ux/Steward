@@ -8,8 +8,10 @@ from __future__ import annotations
 
 import argparse
 import ctypes
+import os
 from pathlib import Path
 import sys
+import threading
 import traceback
 
 from qtpy.QtWidgets import QApplication
@@ -24,6 +26,25 @@ def setup_crash_handler() -> Path:
     crash_dir = Path.home() / ".steward"
     crash_dir.mkdir(parents=True, exist_ok=True)
     crash_log = crash_dir / "steward_app_crash.log"
+
+    # Ensure stdout/stderr are not None in windowed PyInstaller mode
+    if sys.stdout is None:
+        try:
+            sys.stdout = open(os.devnull, "w", encoding="utf-8")
+        except Exception:
+            pass
+    if sys.stderr is None:
+        try:
+            sys.stderr = open(crash_log, "a", encoding="utf-8")
+        except Exception:
+            pass
+
+    # Ensure Qt plugin path includes bundled platforms plugins if frozen
+    if hasattr(sys, "_MEIPASS"):
+        meipass_path = Path(sys._MEIPASS)
+        qt_plugins = meipass_path / "PyQt6" / "Qt6" / "plugins"
+        if qt_plugins.is_dir():
+            os.environ["QT_PLUGIN_PATH"] = str(qt_plugins)
 
     def handle_exception(exc_type, exc_value, exc_traceback):
         if issubclass(exc_type, KeyboardInterrupt):
@@ -57,6 +78,14 @@ def setup_crash_handler() -> Path:
         sys.__excepthook__(exc_type, exc_value, exc_traceback)
 
     sys.excepthook = handle_exception
+
+    def handle_thread_exception(args):
+        if issubclass(args.exc_type, KeyboardInterrupt):
+            return
+        handle_exception(args.exc_type, args.exc_value, args.exc_traceback)
+
+    threading.excepthook = handle_thread_exception
+
     return crash_log
 
 
@@ -84,4 +113,23 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        crash_log = Path.home() / ".steward" / "steward_app_crash.log"
+        err_msg = traceback.format_exc()
+        try:
+            with open(crash_log, "a", encoding="utf-8") as f:
+                f.write(f"\n--- Fatal Startup Exception ---\n{err_msg}\n")
+        except Exception:
+            pass
+        try:
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                f"Failed to launch Steward Desktop Client:\n\n{e}\n\nSee log for details:\n{crash_log}",
+                "Steward Startup Error",
+                0x10 | 0x0,
+            )
+        except Exception:
+            pass
+        sys.exit(1)

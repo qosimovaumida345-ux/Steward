@@ -8,6 +8,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import (
+    QHBoxLayout,
     QLabel,
     QPushButton,
     QTabWidget,
@@ -23,6 +24,7 @@ class SessionListWidget(QWidget):
 
     session_selected = Signal(str)
     new_session_requested = Signal()
+    refresh_requested = Signal()
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
@@ -31,10 +33,20 @@ class SessionListWidget(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(8)
 
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(6)
+
         new_btn = QPushButton("+ New Task")
         new_btn.setObjectName("primaryButton")
         new_btn.clicked.connect(self.new_session_requested.emit)
-        layout.addWidget(new_btn)
+        btn_row.addWidget(new_btn, 1)
+
+        refresh_btn = QPushButton("Refresh")
+        refresh_btn.setToolTip("Reload sessions from server")
+        refresh_btn.clicked.connect(self.refresh_requested.emit)
+        btn_row.addWidget(refresh_btn)
+
+        layout.addLayout(btn_row)
 
         self.tabs = QTabWidget()
 

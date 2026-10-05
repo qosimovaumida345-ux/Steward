@@ -29,6 +29,12 @@ ui_hidden = daemon_hidden + collect_submodules('PyQt6') + [
 pyqt6_datas = collect_data_files('PyQt6')
 pyqt6_binaries = collect_dynamic_libs('PyQt6')
 
+# Specifically duplicate qwindows.dll into root 'platforms' directory to guarantee discovery
+extra_binaries = []
+for src, dst in list(pyqt6_binaries) + list(pyqt6_datas):
+    if 'qwindows.dll' in os.path.basename(str(src)).lower():
+        extra_binaries.append((str(src), 'platforms'))
+
 # Extra application data files
 extra_datas = []
 if (ROOT_DIR / '.env').exists():
@@ -80,7 +86,7 @@ exe_daemon = EXE(
 a_app = Analysis(
     [str(ROOT_DIR / 'run_app.py')],
     pathex=[str(ROOT_DIR)],
-    binaries=pyqt6_binaries,
+    binaries=pyqt6_binaries + extra_binaries,
     datas=pyqt6_datas + extra_datas,
     hiddenimports=ui_hidden,
     hookspath=[],

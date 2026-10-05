@@ -28,7 +28,7 @@ def resolve_server_endpoints(
         "http://localhost:8765"
             -> ("http://localhost:8765", "ws://localhost:8765")
     """
-    raw = (host_or_url or "").strip()
+    raw = (host_or_url or "").strip().rstrip("/")
     if not raw:
         raw = DEFAULT_RENDER_SERVER_URL
 

@@ -13,6 +13,20 @@ from typing import Any, Dict, List, Optional
 logger = logging.getLogger(__name__)
 
 
+def _format_pg8000_query(sql: str, params: tuple | list) -> tuple[str, dict]:
+    parts = sql.split("%s")
+    if len(parts) - 1 != len(params):
+        raise ValueError(f"Param count mismatch: expected {len(parts) - 1}, got {len(params)}")
+    new_sql = []
+    kwargs = {}
+    for i in range(len(params)):
+        new_sql.append(parts[i])
+        new_sql.append(f":p{i}")
+        kwargs[f"p{i}"] = params[i]
+    new_sql.append(parts[-1])
+    return "".join(new_sql), kwargs
+
+
 class RenderPostgresClient:
     """Async adapter for Render Cloud PostgreSQL synchronization."""
 
@@ -69,16 +83,35 @@ class RenderPostgresClient:
             import psycopg2
             return psycopg2.connect(self.dsn, connect_timeout=5)
         elif self._driver == "pg8000":
-            import pg8000.native
-            # parse dsn or connect directly
+            import socket
+            import ssl
             import urllib.parse
+            import pg8000.native
+
             p = urllib.parse.urlparse(self.dsn)
+            host = p.hostname or "localhost"
+
+            # Check if internal Render hostname requires external resolution fallback
+            if host.startswith("dpg-") and "." not in host:
+                try:
+                    socket.gethostbyname(host)
+                except socket.gaierror:
+                    host = f"{host}.oregon-postgres.render.com"
+
+            # Render PostgreSQL requires SSL
+            ssl_ctx = None
+            if "onrender.com" in host or "sslmode=require" in p.query or "ssl=true" in p.query or host.startswith("dpg-"):
+                ssl_ctx = ssl.create_default_context()
+                ssl_ctx.check_hostname = False
+                ssl_ctx.verify_mode = ssl.CERT_NONE
+
             return pg8000.native.Connection(
                 user=p.username or "postgres",
                 password=p.password or "",
-                host=p.hostname or "localhost",
+                host=host,
                 port=p.port or 5432,
                 database=p.path.lstrip("/") or "postgres",
+                ssl_context=ssl_ctx,
                 timeout=5,
             )
         raise RuntimeError("No suitable Postgres driver available.")
@@ -162,8 +195,8 @@ class RenderPostgresClient:
                         cur.execute(sql, params)
                     conn.commit()
                 else:
-                    # pg8000 native format
-                    conn.run(sql.replace("%s", ":param"), **{f"param{i}": p for i, p in enumerate(params)})
+                    pg_sql, pg_kwargs = _format_pg8000_query(sql, params)
+                    conn.run(pg_sql, **pg_kwargs)
             finally:
                 conn.close()
 
@@ -207,14 +240,15 @@ class RenderPostgresClient:
                             if isinstance(ev["payload"], dict)
                             else str(ev["payload"])
                         )
-                        conn.run(
-                            sql.replace("%s", ":p"),
-                            p1=ev["session_id"],
-                            p2=ev["seq"],
-                            p3=ev["event_type"],
-                            p4=payload_str,
-                            p5=ev["created_at"],
+                        ev_params = (
+                            ev["session_id"],
+                            ev["seq"],
+                            ev["event_type"],
+                            payload_str,
+                            ev["created_at"],
                         )
+                        pg_sql, pg_kwargs = _format_pg8000_query(sql, ev_params)
+                        conn.run(pg_sql, **pg_kwargs)
             finally:
                 conn.close()
 

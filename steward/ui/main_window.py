@@ -6,10 +6,11 @@ High-density multi-panel desktop client with real-time daemon synchronization.
 from __future__ import annotations
 
 import logging
+import threading
 from typing import Any, Dict, Optional
 
 import httpx
-from qtpy.QtCore import Qt, QTimer, Slot
+from qtpy.QtCore import Qt, QTimer, Signal, Slot
 from qtpy.QtWidgets import (
     QHBoxLayout,
     QLabel,
@@ -22,7 +23,7 @@ from qtpy.QtWidgets import (
     QWidget,
 )
 
-from ..config.constants import DEFAULT_DAEMON_HOST, DEFAULT_DAEMON_PORT
+from ..config.constants import DEFAULT_DAEMON_HOST, DEFAULT_DAEMON_PORT, DEFAULT_SERVER_URL
 from ..config.endpoints import resolve_server_endpoints
 from ..config.settings import get_settings
 from .components.approval_modal import ApprovalModal
@@ -40,24 +41,31 @@ logger = logging.getLogger(__name__)
 class MainWindow(QMainWindow):
     """Main window orchestrating developer workspaces and real-time streams."""
 
+    dispatch_finished = Signal(str, str)
+    sessions_loaded = Signal(list)
+
     def __init__(
         self,
-        host: str = DEFAULT_DAEMON_HOST,
-        port: int = DEFAULT_DAEMON_PORT,
+        host: Optional[str] = None,
+        port: Optional[int] = None,
         parent=None,
     ) -> None:
         super().__init__(parent)
-        self.host = host
-        self.port = port
-        self.http_base, self.ws_base = resolve_server_endpoints(host, port)
+        settings = get_settings()
+        self.host = host or settings.server_url or DEFAULT_SERVER_URL
+        self.port = port if port is not None else settings.daemon_port
+        self.http_base, self.ws_base = resolve_server_endpoints(self.host, self.port)
         self.current_session_id = "initial"
 
         self.setWindowTitle(f"Steward — Autonomous Developer Agent [{self.http_base}]")
         self.resize(1300, 850)
 
         self._build_ui()
+        self._init_signals()
         self._init_client_thread()
-        self._refresh_sessions()
+
+        # Non-blocking initial session refresh (UI renders immediately)
+        QTimer.singleShot(50, self._refresh_sessions)
 
     def _build_ui(self) -> None:
         central = QWidget(self)
@@ -139,6 +147,11 @@ class MainWindow(QMainWindow):
         self.status_bar = AgentStatusBar()
         self.setStatusBar(self.status_bar)
 
+    def _init_signals(self) -> None:
+        self.sessions_loaded.connect(self.session_list.update_sessions)
+        self.dispatch_finished.connect(self._on_dispatch_finished)
+        self.session_list.refresh_requested.connect(self._refresh_sessions)
+
     def _init_client_thread(self) -> None:
         self.worker = DaemonClientThread(
             session_id=self.current_session_id,
@@ -147,24 +160,39 @@ class MainWindow(QMainWindow):
             parent=self,
         )
         self.worker.event_received.connect(self._on_event_received)
-        self.worker.connection_changed.connect(self.status_bar.set_connected)
+        self.worker.connection_changed.connect(self._on_connection_changed)
         self.worker.error_occurred.connect(self._on_worker_error)
         self.worker.start()
+
+        # Periodic background refresh timer (every 15 seconds)
+        self._refresh_timer = QTimer(self)
+        self._refresh_timer.timeout.connect(self._refresh_sessions)
+        self._refresh_timer.start(15000)
+
+    @Slot(bool)
+    def _on_connection_changed(self, is_connected: bool) -> None:
+        self.status_bar.set_connected(is_connected)
+        if is_connected:
+            self._refresh_sessions()
 
     @Slot(str)
     def _on_worker_error(self, err: str) -> None:
         self.terminal_widget.append_output(f"[Daemon Alert] {err}\n")
 
     def _refresh_sessions(self) -> None:
-        try:
-            url = f"{self.http_base}/api/v1/sessions"
-            with httpx.Client(timeout=5.0) as client:
-                res = client.get(url)
-                if res.status_code == 200:
-                    sessions = res.json().get("sessions", [])
-                    self.session_list.update_sessions(sessions)
-        except Exception as e:
-            logger.debug("Failed to refresh sessions from %s: %s", self.http_base, e)
+        """Fetch sessions asynchronously in background thread so the UI never freezes."""
+        def _fetch():
+            try:
+                url = f"{self.http_base}/api/v1/sessions"
+                with httpx.Client(timeout=10.0) as client:
+                    res = client.get(url)
+                    if res.status_code == 200:
+                        sessions = res.json().get("sessions", [])
+                        self.sessions_loaded.emit(sessions)
+            except Exception as e:
+                logger.debug("Failed to refresh sessions from %s: %s", self.http_base, e)
+
+        threading.Thread(target=_fetch, daemon=True).start()
 
     @Slot(str)
     def _on_session_switched(self, session_id: str) -> None:
@@ -187,21 +215,34 @@ class MainWindow(QMainWindow):
 
         self.prompt_input.clear()
         selected_model = self.model_selector.get_selected_model_id()
+        self.terminal_widget.append_output(f"[Client] Dispatching task to server ({self.http_base})...\n")
 
-        try:
-            url = f"{self.http_base}/api/v1/sessions"
-            with httpx.Client(timeout=15.0) as client:
-                resp = client.post(
-                    url,
-                    json={"task": task_text, "model": selected_model},
-                )
-                if resp.status_code == 201:
-                    new_sid = resp.json().get("session_id")
-                    if new_sid:
-                        self._on_session_switched(new_sid)
-                        self._refresh_sessions()
-        except Exception as e:
-            self.terminal_widget.append_output(f"Failed to dispatch task to server ({self.http_base}): {e}\n")
+        def _dispatch():
+            try:
+                url = f"{self.http_base}/api/v1/sessions"
+                with httpx.Client(timeout=30.0) as client:
+                    resp = client.post(
+                        url,
+                        json={"task": task_text, "model": selected_model},
+                    )
+                    if resp.status_code == 201:
+                        new_sid = resp.json().get("session_id", "")
+                        self.dispatch_finished.emit("success", new_sid)
+                        return
+                    self.dispatch_finished.emit("error", f"HTTP {resp.status_code}: {resp.text}")
+            except Exception as e:
+                self.dispatch_finished.emit("error", str(e))
+
+        threading.Thread(target=_dispatch, daemon=True).start()
+
+    @Slot(str, str)
+    def _on_dispatch_finished(self, status: str, payload: str) -> None:
+        if status == "success":
+            self.terminal_widget.append_output(f"[Client] Task started. Active session: {payload}\n")
+            self._on_session_switched(payload)
+            self._refresh_sessions()
+        else:
+            self.terminal_widget.append_output(f"[Client Error] Failed to dispatch task to {self.http_base}: {payload}\n")
 
     @Slot()
     def _on_cancel_clicked(self) -> None:
@@ -259,5 +300,7 @@ class MainWindow(QMainWindow):
                 modal.show()
 
     def closeEvent(self, event) -> None:
+        if hasattr(self, "_refresh_timer") and self._refresh_timer.isActive():
+            self._refresh_timer.stop()
         self.worker.stop()
         super().closeEvent(event)

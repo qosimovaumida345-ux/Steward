@@ -6,6 +6,7 @@ Loads from environment variables and local .env files.
 from __future__ import annotations
 
 import os
+import sys
 from functools import lru_cache
 from pathlib import Path
 from typing import Optional
@@ -27,17 +28,40 @@ from .constants import (
     PermissionMode,
 )
 
-# Load existing .env files if present (check current dir, parent dir, or executable dir)
+# Load existing .env files if present (check current dir, executable dir, MEIPASS, or project root)
 _candidate_envs = [
     Path.cwd() / ".env",
+    Path(sys.executable).parent / ".env",
+    (Path(getattr(sys, "_MEIPASS", "")) / ".env") if hasattr(sys, "_MEIPASS") else None,
     Path(__file__).resolve().parent.parent.parent / ".env",
 ]
 for _env_path in _candidate_envs:
-    if _env_path.exists():
+    if _env_path and _env_path.exists():
         load_dotenv(dotenv_path=_env_path, override=False)
         break
 else:
     load_dotenv(override=False)
+
+
+def _resolve_server_url() -> str:
+    url = os.getenv("STEWARD_SERVER_URL")
+    if url:
+        return url
+    host = os.getenv("STEWARD_HOST")
+    if host and "://" in host:
+        return host
+    return DEFAULT_SERVER_URL
+
+
+def _resolve_daemon_host() -> str:
+    daemon_host = os.getenv("STEWARD_DAEMON_HOST")
+    if daemon_host:
+        return daemon_host
+    host = os.getenv("STEWARD_HOST")
+    # If STEWARD_HOST is a full URL, do not use it as local bind host
+    if host and "://" not in host:
+        return host
+    return DEFAULT_DAEMON_HOST
 
 
 class Settings(BaseModel):
@@ -68,7 +92,7 @@ class Settings(BaseModel):
 
     # Server / Render Cloud Endpoint
     server_url: str = Field(
-        default_factory=lambda: os.getenv("STEWARD_SERVER_URL") or os.getenv("STEWARD_HOST") or DEFAULT_SERVER_URL
+        default_factory=_resolve_server_url
     )
 
     # Local Persistence
@@ -81,7 +105,7 @@ class Settings(BaseModel):
 
     # Network / Daemon
     daemon_host: str = Field(
-        default_factory=lambda: os.getenv("STEWARD_HOST") or DEFAULT_DAEMON_HOST
+        default_factory=_resolve_daemon_host
     )
     daemon_port: int = Field(
         default_factory=lambda: int(os.getenv("STEWARD_PORT") or str(DEFAULT_DAEMON_PORT))

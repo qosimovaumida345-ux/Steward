@@ -37,9 +37,6 @@ Developers can dispatch long-running engineering tasks from their desktop workst
    - Dedicated secondary `DaemonClientThread` (`QThread`) running asyncio WebSocket communications, communicating exclusively via thread-safe `pyqtSignal` events.
    - Live collapsible reasoning pane, terminal output stream, unified/side-by-side diff viewer, and session tree.
 
-6. **Production Multi-Binary Packaging**:
-   - PyInstaller pipeline building `agent_daemon.exe` and `agent_app.exe`.
-   - Inno Setup 6 script (`setup_installer.iss`) for single-click Windows installation.
 
 ---
 

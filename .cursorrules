@@ -1,0 +1,17 @@
+# Code Integrity & Design Rules
+
+## Code Integrity & Import Hygiene
+- Never finish a task without checking for syntax and import errors.
+- Run `python -m py_compile <file>` and run tests via `pytest`.
+- Avoid unused imports, circular imports, or unhandled exceptions.
+
+## UI Design & Anti-AI-Slop Standards
+- Strictly forbid using raw Unicode emojis (🔥, 🚀, 💰, etc.) as substitute icons.
+- Always use vector icons (Lucide, SVG, Phosphor).
+- Provide smooth micro-animations, tactile button depression, and Figma-grade visual hierarchy.
+
+## Roblox UI Standards
+- Follow `.agents/skills/roblox-elite-ui/SKILL.md`: 3D tactile buttons, tiled stud backgrounds, SoundService audio feedback, and Lucide vector icons.
+
+## Computer Use Standards
+- Follow `.agents/skills/advanced-computer-use/SKILL.md`: DPI awareness, interactive desktop attachment, and PAV (Perception-Action-Verification) loop.

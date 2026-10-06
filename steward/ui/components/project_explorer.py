@@ -147,7 +147,7 @@ class ProjectExplorerWidget(QWidget):
 
     def _update_root_path(self, path: Path) -> None:
         self.root_path = path.resolve()
-        self.folder_label.setText(f"📁 {self.root_path.name}")
+        self.folder_label.setText(f"Project: {self.root_path.name}")
         self.folder_label.setToolTip(str(self.root_path))
 
         source_index = self.fs_model.setRootPath(str(self.root_path))

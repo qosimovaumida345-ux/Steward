@@ -388,9 +388,9 @@ class ChatViewWidget(QWidget):
         suggestions_box.setSpacing(8)
 
         prompts = [
-            ("⚡ Audit Codebase & Verify Tests", "Run full pytest suite and report any coverage or stability issues."),
-            ("🔍 Architecture Scan", "Analyze project structure, dependencies, and daemon endpoints."),
-            ("🛠️ Autonomous Refactor", "Refactor storage synchronization and add end-to-end integration tests."),
+            ("Audit Codebase & Verify Tests", "Run full pytest suite and report any coverage or stability issues."),
+            ("Architecture Scan", "Analyze project structure, dependencies, and daemon endpoints."),
+            ("Autonomous Refactor", "Refactor storage synchronization and add end-to-end integration tests."),
         ]
 
         for title, p_text in prompts:

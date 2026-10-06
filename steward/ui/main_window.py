@@ -104,7 +104,7 @@ class MainWindow(QMainWindow):
         top_bar.addWidget(logo)
 
         # Workspace Directory Button
-        self.workspace_btn = QPushButton(f"📁 {self.workspace_dir.name}")
+        self.workspace_btn = QPushButton(f"Project: {self.workspace_dir.name}")
         self.workspace_btn.setObjectName("ghostButton")
         self.workspace_btn.setToolTip(f"Workspace: {self.workspace_dir}\nClick to change folder")
         self.workspace_btn.clicked.connect(self._on_change_workspace)
@@ -245,7 +245,7 @@ class MainWindow(QMainWindow):
 
     def _update_workspace(self, path: Path) -> None:
         self.workspace_dir = path.resolve()
-        self.workspace_btn.setText(f"📁 {self.workspace_dir.name}")
+        self.workspace_btn.setText(f"Project: {self.workspace_dir.name}")
         self.workspace_btn.setToolTip(f"Workspace: {self.workspace_dir}")
         self.setWindowTitle(f"Steward 2.0 — Autonomous Developer Agent [{self.workspace_dir.name}]")
         self.project_explorer.set_workspace(str(self.workspace_dir))
@@ -253,7 +253,7 @@ class MainWindow(QMainWindow):
     def _on_workspace_changed_from_explorer(self, path_str: str) -> None:
         target = Path(path_str).resolve()
         self.workspace_dir = target
-        self.workspace_btn.setText(f"📁 {self.workspace_dir.name}")
+        self.workspace_btn.setText(f"Project: {self.workspace_dir.name}")
         self.workspace_btn.setToolTip(f"Workspace: {self.workspace_dir}")
         self.setWindowTitle(f"Steward 2.0 — Autonomous Developer Agent [{self.workspace_dir.name}]")
 
@@ -281,14 +281,14 @@ class MainWindow(QMainWindow):
     def _on_connection_changed(self, is_connected: bool) -> None:
         self.status_bar.set_connected(is_connected)
         if is_connected:
-            self.server_badge.setText(f"🟢 Connected: {self.http_base}")
+            self.server_badge.setText(f"Connected: {self.http_base}")
             self.server_badge.setStyleSheet(
                 "color: #34D399; background: #064E3B; border: 1px solid #059669; "
                 "font-size: 11px; padding: 3px 8px; border-radius: 4px;"
             )
             self._refresh_sessions()
         else:
-            self.server_badge.setText(f"🟡 Detached: {self.http_base}")
+            self.server_badge.setText(f"Detached: {self.http_base}")
             self.server_badge.setStyleSheet(
                 "color: #FCD34D; background: #451A03; border: 1px solid #D97706; "
                 "font-size: 11px; padding: 3px 8px; border-radius: 4px;"

@@ -7,7 +7,15 @@ from __future__ import annotations
 
 from qtpy.QtCore import Qt
 from qtpy.QtGui import QColor, QTextCharFormat, QTextCursor
-from qtpy.QtWidgets import QLabel, QTextEdit, QVBoxLayout, QWidget
+from qtpy.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 
 class DiffViewerWidget(QWidget):
@@ -15,14 +23,32 @@ class DiffViewerWidget(QWidget):
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)
+        self._current_diff = ""
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
         layout.setSpacing(4)
 
+        header_bar = QHBoxLayout()
+        header_bar.setSpacing(6)
+
         header = QLabel("File Changes & Unified Diffs")
         header.setStyleSheet("color: #94A3B8; font-weight: 600; font-size: 11px;")
-        layout.addWidget(header)
+        header_bar.addWidget(header, 1)
+
+        copy_btn = QPushButton("Copy")
+        copy_btn.setObjectName("ghostButton")
+        copy_btn.setFixedWidth(50)
+        copy_btn.clicked.connect(self._copy_diff)
+        header_bar.addWidget(copy_btn)
+
+        clear_btn = QPushButton("Clear")
+        clear_btn.setObjectName("ghostButton")
+        clear_btn.setFixedWidth(50)
+        clear_btn.clicked.connect(lambda: self.set_diff(""))
+        header_bar.addWidget(clear_btn)
+
+        layout.addLayout(header_bar)
 
         self.editor = QTextEdit()
         self.editor.setObjectName("diffViewer")
@@ -32,6 +58,7 @@ class DiffViewerWidget(QWidget):
 
     def set_diff(self, diff_text: str) -> None:
         """Render diff text with syntax coloring."""
+        self._current_diff = diff_text
         self.editor.clear()
         if not diff_text:
             self.editor.setPlainText("(No file changes recorded)")
@@ -64,3 +91,7 @@ class DiffViewerWidget(QWidget):
                 cursor.insertText(line + "\n", default_fmt)
 
         self.editor.moveCursor(QTextCursor.Start)
+
+    def _copy_diff(self) -> None:
+        if self._current_diff:
+            QApplication.clipboard().setText(self._current_diff)

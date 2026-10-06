@@ -8,7 +8,7 @@ from __future__ import annotations
 import json
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 from .nvidia_client import NvidiaNimClient
@@ -66,6 +66,7 @@ class DualEngineCoordinator:
         task: str,
         workspace_context: str = "",
         model: Optional[str] = None,
+        on_chunk: Optional[Callable[[str, str], None]] = None,
     ) -> ExecutionPlan:
         """
         Invoke DeepSeek-R1 to plan the architectural DAG.
@@ -92,6 +93,8 @@ class DualEngineCoordinator:
                     full_reasoning.append(r_chunk)
                 if c_chunk:
                     full_content.append(c_chunk)
+                if on_chunk:
+                    on_chunk(r_chunk, c_chunk)
         except Exception as e:
             logger.warning("Error generating plan via NIM stream (%s), using local fallback planner", e)
             return self._fallback_plan(task, str(e))
@@ -107,6 +110,7 @@ class DualEngineCoordinator:
         failed_step: PlanStep,
         error_output: str,
         model: Optional[str] = None,
+        on_chunk: Optional[Callable[[str, str], None]] = None,
     ) -> ExecutionPlan:
         """
         Targeted replanning after verification failure.
@@ -140,6 +144,8 @@ class DualEngineCoordinator:
                     full_reasoning.append(r_chunk)
                 if c_chunk:
                     full_content.append(c_chunk)
+                if on_chunk:
+                    on_chunk(r_chunk, c_chunk)
         except Exception as e:
             logger.warning("Error during replan (%s), using local recovery plan", e)
             return self._fallback_plan(f"Fix failure in: {failed_step.title}", error_output)

@@ -67,7 +67,13 @@ class AutonomousAgentLoop:
             EventType.STATUS_CHANGED, {"status": SessionState.PLANNING.value}
         )
 
-        plan = await self.coordinator.generate_plan(task_description, workspace_context)
+        def _on_reasoning_chunk(r_chunk: str, c_chunk: str) -> None:
+            if r_chunk:
+                self.journal.record_event(EventType.THINKING_CHUNK, {"chunk": r_chunk})
+
+        plan = await self.coordinator.generate_plan(
+            task_description, workspace_context, on_chunk=_on_reasoning_chunk
+        )
         self._current_plan = plan
 
         self.journal.record_event(
@@ -103,7 +109,10 @@ class AutonomousAgentLoop:
                 step.status = "failed"
                 # Replan
                 replanned = await self.coordinator.replan_on_failure(
-                    task_description, step, step.result_summary or "Execution failed"
+                    task_description,
+                    step,
+                    step.result_summary or "Execution failed",
+                    on_chunk=_on_reasoning_chunk,
                 )
                 if replanned and replanned.steps:
                     self._current_plan = replanned
